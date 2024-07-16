@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,6 +12,7 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text BestScore;
     public GameObject GameOverText;
     
     private bool m_Started = false;
@@ -36,6 +38,10 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        ScoreText.text = $"Score : {m_Points}, Name : {global.Instance.name}";
+        LoadScore();
+        ShowBestScore();
     }
 
     private void Update()
@@ -65,12 +71,55 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        ScoreText.text = $"Score : {m_Points}, Name : {global.Instance.name}";
     }
 
     public void GameOver()
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+
+        //calculate best score
+        if(m_Points > global.Instance.bestScore)
+        {
+            global.Instance.bestScore = m_Points;
+            global.Instance.bestName = global.Instance.name;
+            SaveScore(global.Instance.name, m_Points);
+            ShowBestScore();
+        }
+    }
+
+    [System.Serializable]
+    class SaveData
+    {
+        public string name;
+        public int score;
+    };
+
+    public void SaveScore(string name, int score)
+    {
+        SaveData data = new SaveData();
+        data.name = name;
+        data.score = score;
+        string json = JsonUtility.ToJson(data);
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+
+    }
+
+    public void LoadScore()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+            global.Instance.bestName = data.name;
+            global.Instance.bestScore = data.score;
+        }
+    }
+
+    void ShowBestScore()
+    {
+        BestScore.text = "Best Score: " + global.Instance.bestScore + " name: " + global.Instance.bestName;
     }
 }
